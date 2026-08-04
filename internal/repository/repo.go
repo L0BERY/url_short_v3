@@ -8,10 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type postgresRepository struct {
-	db DB
-}
-
 type DB interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
@@ -22,6 +18,10 @@ type PostgresRepository interface {
 	AddNewUrl(ctx context.Context, url, code string) error
 	GetCode(ctx context.Context, url string) (string, error)
 	GetUrl(ctx context.Context, code string) (string, error)
+}
+
+type postgresRepository struct {
+	db DB
 }
 
 func NewRepository(db DB) PostgresRepository {
