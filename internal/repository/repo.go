@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type repository struct {
+type postgresRepository struct {
 	db DB
 }
 
@@ -18,19 +18,19 @@ type DB interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-type Repository interface {
+type PostgresRepository interface {
 	AddNewUrl(ctx context.Context, url, code string) error
 	GetCode(ctx context.Context, url string) (string, error)
 	GetUrl(ctx context.Context, code string) (string, error)
 }
 
-func NewRepository(db DB) Repository {
-	return &repository{
+func NewRepository(db DB) PostgresRepository {
+	return &postgresRepository{
 		db: db,
 	}
 }
 
-func (r *repository) AddNewUrl(ctx context.Context, url, code string) error {
+func (r *postgresRepository) AddNewUrl(ctx context.Context, url, code string) error {
 	query := `INSERT INTO urls (url, code) VALUES ($1, $2)`
 
 	_, err := r.db.Exec(ctx, query, url, code)
@@ -41,7 +41,7 @@ func (r *repository) AddNewUrl(ctx context.Context, url, code string) error {
 	return nil
 }
 
-func (r *repository) GetCode(ctx context.Context, url string) (string, error) {
+func (r *postgresRepository) GetCode(ctx context.Context, url string) (string, error) {
 	query := `SELECT code FROM urls WHERE url = $1`
 
 	var code string
@@ -55,7 +55,7 @@ func (r *repository) GetCode(ctx context.Context, url string) (string, error) {
 	return code, nil
 }
 
-func (r *repository) GetUrl(ctx context.Context, code string) (string, error) {
+func (r *postgresRepository) GetUrl(ctx context.Context, code string) (string, error) {
 	query := `SELECT url FROM urls WHERE code = $1`
 
 	var url string
