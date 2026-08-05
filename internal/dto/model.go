@@ -2,20 +2,20 @@ package dto
 
 import "time"
 
-type AddNewUrlRequests struct {
-	Url string `json:"url"`
+type AddNewURLRequests struct {
+	URL string `json:"url"`
 }
 
 type GetCodeRequests struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 type CodeResponse struct {
-	Code string `json:"url"`
+	Code string `json:"code"`
 }
 
-type UrlStatsResponse struct {
-	Url        string    `json:"url"`
+type URLStatsResponse struct {
+	URL        string    `json:"url"`
 	Code       string    `json:"code"`
 	CreatedAt  time.Time `json:"created_at"`
 	ClickCount int64     `json:"click_count"`

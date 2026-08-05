@@ -10,27 +10,47 @@ import (
 )
 
 type Service interface {
+	GetURL(ctx context.Context, code string) (string, error)
+	AddNewURL(ctx context.Context, url string) (string, error)
 }
 
 type service struct {
-	repo repository.PostgresRepository
+	repo repository.Repository
 }
 
-func NewService(repo repository.PostgresRepository) Service {
+func NewService(repo repository.Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) GenearteCode() string {
+func (s *service) GenerateCode() string {
 	bytes := make([]byte, 4)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
+}
+
+func (s *service) AddNewURL(ctx context.Context, url string) (string, error) {
+	if url == "" {
+		return "", ErrEmptyUrl
+	}
+
+	for i := 0; i <= 10; i++ {
+		code := s.GenerateCode()
+		if !s.repo.ExistsCode(ctx, code) {
+			err := s.repo.AddNewURL(ctx, url, code)
+			if err != nil {
+				return "", ErrServer
+			}
+			return code, nil
+		}
+	}
+	return "", ErrTooManyAttempts
 }
 
 // func (s *service) GetCode(url string) (string, error) {
 
 // }
 
-func (s *service) GetUrl(ctx context.Context, code string) (string, error) {
+func (s *service) GetURL(ctx context.Context, code string) (string, error) {
 	if code == "" {
 		return "", ErrEmptyCode
 	}
@@ -38,7 +58,7 @@ func (s *service) GetUrl(ctx context.Context, code string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	url, err := s.repo.GetUrl(ctx, code)
+	url, err := s.repo.GetURL(ctx, code)
 	if errors.Is(err, repository.ErrUrlNotFound) {
 		return "", ErrUrlNotFound
 	} else if err != nil {

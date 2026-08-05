@@ -14,24 +14,27 @@ type DB interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-type PostgresRepository interface {
-	AddNewUrl(ctx context.Context, url, code string) error
+type Repository interface {
+	AddNewURL(ctx context.Context, url, code string) error
 	GetCode(ctx context.Context, url string) (string, error)
-	GetUrl(ctx context.Context, code string) (string, error)
+	GetURL(ctx context.Context, code string) (string, error)
+	ExistsCode(ctx context.Context, code string) bool
 }
 
-type postgresRepository struct {
+type repository struct {
 	db DB
 }
 
-func NewRepository(db DB) PostgresRepository {
-	return &postgresRepository{
+func NewRepository(db DB) Repository {
+	return &repository{
 		db: db,
 	}
 }
 
-func (r *postgresRepository) AddNewUrl(ctx context.Context, url, code string) error {
-	query := `INSERT INTO urls (url, code) VALUES ($1, $2)`
+func (r *repository) AddNewURL(ctx context.Context, url, code string) error {
+	query := `INSERT INTO urls (url, code) VALUES ($1, $2)
+				ON CONFLICT (url) DO UPDATE SET url = EXCLUDED.url
+				RETURNING code`
 
 	_, err := r.db.Exec(ctx, query, url, code)
 	if err != nil {
@@ -41,7 +44,7 @@ func (r *postgresRepository) AddNewUrl(ctx context.Context, url, code string) er
 	return nil
 }
 
-func (r *postgresRepository) GetCode(ctx context.Context, url string) (string, error) {
+func (r *repository) GetCode(ctx context.Context, url string) (string, error) {
 	query := `SELECT code FROM urls WHERE url = $1`
 
 	var code string
@@ -55,7 +58,7 @@ func (r *postgresRepository) GetCode(ctx context.Context, url string) (string, e
 	return code, nil
 }
 
-func (r *postgresRepository) GetUrl(ctx context.Context, code string) (string, error) {
+func (r *repository) GetURL(ctx context.Context, code string) (string, error) {
 	query := `SELECT url FROM urls WHERE code = $1`
 
 	var url string
@@ -67,4 +70,12 @@ func (r *postgresRepository) GetUrl(ctx context.Context, code string) (string, e
 	}
 
 	return url, nil
+}
+
+func (r *repository) ExistsCode(ctx context.Context, code string) bool {
+	query := `SELECT EXISTS(SELECT 1 FROM urls WHERE code = $1)`
+
+	var exists bool
+	err := r.db.QueryRow(ctx, query, code).Scan(&exists)
+	return err == nil && exists
 }
