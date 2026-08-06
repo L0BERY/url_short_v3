@@ -15,10 +15,9 @@ type DB interface {
 }
 
 type Repository interface {
-	AddNewURL(ctx context.Context, url, code string) error
+	AddNewURL(ctx context.Context, url, code string) (string, error)
 	GetCode(ctx context.Context, url string) (string, error)
 	GetURL(ctx context.Context, code string) (string, error)
-	ExistsCode(ctx context.Context, code string) bool
 }
 
 type repository struct {
@@ -31,17 +30,18 @@ func NewRepository(db DB) Repository {
 	}
 }
 
-func (r *repository) AddNewURL(ctx context.Context, url, code string) error {
+func (r *repository) AddNewURL(ctx context.Context, url, code string) (string, error) {
 	query := `INSERT INTO urls (url, code) VALUES ($1, $2)
 				ON CONFLICT (url) DO UPDATE SET url = EXCLUDED.url
 				RETURNING code`
 
-	_, err := r.db.Exec(ctx, query, url, code)
-	if err != nil {
-		return err
+	var stored string
+
+	if err := r.db.QueryRow(ctx, query, url, code).Scan(&stored); err != nil {
+		return "", err
 	}
 
-	return nil
+	return stored, nil
 }
 
 func (r *repository) GetCode(ctx context.Context, url string) (string, error) {
@@ -70,12 +70,4 @@ func (r *repository) GetURL(ctx context.Context, code string) (string, error) {
 	}
 
 	return url, nil
-}
-
-func (r *repository) ExistsCode(ctx context.Context, code string) bool {
-	query := `SELECT EXISTS(SELECT 1 FROM urls WHERE code = $1)`
-
-	var exists bool
-	err := r.db.QueryRow(ctx, query, code).Scan(&exists)
-	return err == nil && exists
 }

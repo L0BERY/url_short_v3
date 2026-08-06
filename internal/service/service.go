@@ -7,6 +7,8 @@ import (
 	"errors"
 	"time"
 	"url_shortener_v3/internal/repository"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Service interface {
@@ -33,15 +35,14 @@ func (s *service) AddNewURL(ctx context.Context, url string) (string, error) {
 		return "", ErrEmptyUrl
 	}
 
-	for i := 0; i <= 10; i++ {
+	for range 10 {
 		code := s.GenerateCode()
-		if !s.repo.ExistsCode(ctx, code) {
-			err := s.repo.AddNewURL(ctx, url, code)
-			if err != nil {
-				return "", ErrServer
-			}
-			return code, nil
+		code, err := s.repo.AddNewURL(ctx, url, code)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "urls_code_key" {
+			continue
 		}
+		return code, err
 	}
 	return "", ErrTooManyAttempts
 }

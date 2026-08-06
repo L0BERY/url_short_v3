@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сокращатель ссылок</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --border: #e2e5ea;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --error: #dc2626;
+    --ok: #16a34a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --card: #1e2127;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --border: #2e323a;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --error: #f87171;
+      --ok: #4ade80;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 520px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+  }
+
+  h1 { margin: 0 0 4px; font-size: 22px; }
+
+  .subtitle { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+
+  form { display: flex; gap: 8px; }
+
+  input[type="url"] {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 14px;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    outline: none;
+  }
+  input[type="url"]:focus { border-color: var(--accent); }
+
+  button {
+    padding: 11px 18px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: var(--accent-hover); }
+  button:disabled { opacity: .55; cursor: default; }
+
+  .result {
+    display: none;
+    margin-top: 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg);
+  }
+  .result.shown { display: block; }
+  .result .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .result .row { display: flex; align-items: center; gap: 10px; }
+  .result a {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--accent);
+    font-size: 15px;
+  }
+  .copy {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+  .copy:hover:not(:disabled) { background: var(--card); border-color: var(--accent); }
+  .copy.done { color: var(--ok); border-color: var(--ok); }
+
+  .error {
+    display: none;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--error);
+  }
+  .error.shown { display: block; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <h1>Сокращатель ссылок</h1>
+    <p class="subtitle">Вставьте длинную ссылку — получите короткую.</p>
+
+    <form id="form">
+      <input id="url" type="url" placeholder="https://example.com/very/long/link" required autofocus>
+      <button id="submit" type="submit">Сократить</button>
+    </form>
+
+    <p class="error" id="error"></p>
+
+    <div class="result" id="result">
+      <div class="label">Короткая ссылка</div>
+      <div class="row">
+        <a id="short" href="#" target="_blank" rel="noopener"></a>
+        <button class="copy" id="copy" type="button">Копировать</button>
+      </div>
+    </div>
+  </main>
+
+<script>
+  const form = document.getElementById('form');
+  const input = document.getElementById('url');
+  const submit = document.getElementById('submit');
+  const errorBox = document.getElementById('error');
+  const result = document.getElementById('result');
+  const shortLink = document.getElementById('short');
+  const copyBtn = document.getElementById('copy');
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.classList.add('shown');
+    result.classList.remove('shown');
+  }
+
+  function showResult(code) {
+    const url = `${window.location.origin}/${code}`;
+    shortLink.textContent = url;
+    shortLink.href = url;
+    result.classList.add('shown');
+    errorBox.classList.remove('shown');
+    copyBtn.textContent = 'Копировать';
+    copyBtn.classList.remove('done');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const url = input.value.trim();
+    if (!url) return;
+
+    submit.disabled = true;
+    submit.textContent = '...';
+    errorBox.classList.remove('shown');
+
+    try {
+      const res = await fetch('/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showError(data.error || `Ошибка ${res.status}`);
+        return;
+      }
+      if (!data.code) {
+        showError('Сервер не вернул код ссылки');
+        return;
+      }
+      showResult(data.code);
+    } catch {
+      showError('Не удалось связаться с сервером');
+    } finally {
+      submit.disabled = false;
+      submit.textContent = 'Сократить';
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shortLink.textContent);
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(shortLink);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+    }
+    copyBtn.textContent = 'Скопировано';
+    copyBtn.classList.add('done');
+  });
+</script>
+</body>
+</html>

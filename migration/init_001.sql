@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS urls (
     code VARCHAR (8) UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     click_count BIGINT NOT NULL DEFAULT 0
-)
+);
 
--- CREATE INDEX IF NOT EXISTS idx_url ON urls(url)
--- CREATE INDEX IF NOT EXISTS idx_code ON urls(code)
+-- CREATE INDEX IF NOT EXISTS idx_url ON urls(url);
+-- CREATE INDEX IF NOT EXISTS idx_code ON urls(code);
