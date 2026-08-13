@@ -6,7 +6,8 @@ on:
             - main
         paths-ignore:
             - '**/*.md'
-            - '**/.circleci/*'
+            - '.circleci/**'
+            - '.github/**'
 
 jobs:
     lint:
