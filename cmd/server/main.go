@@ -67,7 +67,7 @@ func main() {
 	}
 }
 
-func probeHealth(addr string) int {
+func probeHealth(addr string) (exitCode int) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		log.Printf("health: некорректный адрес %q: %v", addr, err)
@@ -84,7 +84,14 @@ func probeHealth(addr string) int {
 		log.Printf("health: %v", err)
 		return 1
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("failed to close response body: %v", closeErr)
+			if exitCode == 0 {
+				exitCode = 1
+			}
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("health: HTTP %d", resp.StatusCode)
