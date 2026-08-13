@@ -1,0 +1,79 @@
+version: 2.1
+
+commands:
+  skip_if_only_docks:
+    steps:
+      - run:
+          name: Skip when only docks changed
+          command: |
+            if ! get rev-parse HEAD~1 >dev/null 2>&1; then
+              echo "No previous commit - continuing"
+              exit 0
+            fi
+            CHANGED=$(git diff --name-only HEAD~1 HEAD)
+            if [ -z "$CHANGED" ]; then exit 0; fi
+            echo "$CHANGED"
+            if ! echo "$CHANGED" | grep -qvE '^(ansible/|docs/|.*\.md$|.*\.txt$)'; then
+              echo "Only docs or ansible changed - skipping"
+              circleci-agent step halt
+            fi
+
+  install_go:
+    parameters:
+      version:
+        type: string
+        default: "1.25.3"
+    steps:
+      - run:
+        name: Install Go << parameters.version >>
+        command: |
+          curl -sSL "https://go.dev/dl/go<< parameters.version >>.linux-amd64.tar.gz" \
+            | sudo tar -C /usr/local -xz
+          echo 'export PATH=$PATH:/usr/local/go/bin' >> "$BASH_ENV"
+
+jobs:
+  lint:
+    docker:
+      - image: cimg/go:1.25
+    steps:
+      - checkout
+      - skip_if_only_docks
+      - run:
+          name: Install golangci-lint
+          command: |
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+              | sh -s -- -b "$(go env GOPATH)/bin" latest
+      - run:
+          name: Run linter
+          command: golangci-lint run --timeout=5m ./..
+
+  test:
+    docker:
+      - image: cimg/go:1.25
+    steps:
+      - checkout
+      - skip_if_only_docks
+      - run:
+          name: Download dependencies
+          command: go mod download
+      - run:
+          name: Run tests
+          command: go test -v -race -cover -coverprofile=coverage.out ./...
+      - run:
+          name: Show coverage
+          command: go tool cover -func=coverage.out
+
+
+workflows:
+  ci:
+    jobs:
+      - lint:
+          filters:
+            branches:
+              only:
+                - main
+      - test:
+          filters:
+            branches:
+              only:
+                - main
