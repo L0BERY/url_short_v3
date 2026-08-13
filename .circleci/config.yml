@@ -25,11 +25,11 @@ commands:
         default: "1.25.3"
     steps:
       - run:
-        name: Install Go << parameters.version >>
-        command: |
-          curl -sSL "https://go.dev/dl/go<< parameters.version >>.linux-amd64.tar.gz" \
-            | sudo tar -C /usr/local -xz
-          echo 'export PATH=$PATH:/usr/local/go/bin' >> "$BASH_ENV"
+          name: Install Go << parameters.version >>
+          command: |
+            curl -sSL "https://go.dev/dl/go<< parameters.version >>.linux-amd64.tar.gz" \
+              | sudo tar -C /usr/local -xz
+            echo 'export PATH=$PATH:/usr/local/go/bin' >> "$BASH_ENV"
 
 jobs:
   lint:
