@@ -8,6 +8,7 @@ on:
             - '**/*.md'
             - '.circleci/**'
             - '.github/**'
+            - 'docker-compose.yml'
 
 jobs:
     lint:

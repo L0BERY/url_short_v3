@@ -7,18 +7,16 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    # ports:
-    #   - "127.0.0.1:8080:8080"
     expose:
       - "8080"
     networks:
       - backend
       - proxy-network
     labels:
-      - "traefik.enable=true" # Говорим Traefik обрабатывать этот контейнер
-      - "traefik.http.routers.my-app.rule=Host(`mysite.localhost`)" # Ваш домен (для тестов можно использовать .localhost)
-      - "traefik.http.routers.my-app.entrypoints=web" # Используем точку входа :80 из настроек Traefik
-      - "traefik.http.services.my-app.loadbalancer.server.port=8080" # Внутренний порт самого приложения
+      - "traefik.enable=true"
+      - "traefik.http.routers.my-app.rule=Host(`mysite.localhost`)"
+      - "traefik.http.routers.my-app.entrypoints=web"
+      - "traefik.http.services.my-app.loadbalancer.server.port=8080"
       - "traefik.docker.network=proxy-network" 
       - "traefik.http.middlewares.anti-bot.ratelimit.average=2"
       - "traefik.http.middlewares.anti-bot.ratelimit.burst=5"
